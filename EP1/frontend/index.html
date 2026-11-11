@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Architecture Series - EP1: Microservices Networking</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --accent: #38bdf8;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --green: #4ade80;
+            --purple: #c084fc;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 30px 20px;
+            line-height: 1.6;
+        }
+        .container { max-width: 960px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; }
+        h1 { font-size: 2rem; color: var(--accent); margin-bottom: 8px; }
+        p.subtitle { color: var(--muted); font-size: 1.05rem; }
+        
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--purple);
+        }
+        
+        .badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .network-diag {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 15px;
+        }
+        .node {
+            background: #090d16;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .node h3 { font-size: 1rem; color: var(--green); margin-bottom: 8px; }
+        .node p { font-size: 0.85rem; color: var(--muted); }
+        .node code { background: #1a2234; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: #f1f5f9; }
+
+        .btn {
+            background: var(--accent);
+            color: #0f172a;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+
+        pre {
+            background: #090d16;
+            border: 1px solid var(--border);
+            padding: 14px;
+            border-radius: 6px;
+            overflow-x: auto;
+            color: #38bdf8;
+            font-size: 0.9rem;
+            margin-top: 12px;
+        }
+        
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">EPISODE 1 DEMONSTRATION</span>
+            <h1>Docker Microservices Communication & Networking</h1>
+            <p class="subtitle">Complete implementation of custom bridge networks, service discovery & port mapping</p>
+        </header>
+
+        <!-- Chapter Reference Card -->
+        <div class="card">
+            <h2>Episode 1 Architecture Breakdown</h2>
+            <div class="network-diag">
+                <div class="node">
+                    <h3>1. Frontend Container</h3>
+                    <p><b>Network:</b> <code>frontend-net</code></p>
+                    <p><b>Port Mapping:</b> <code>3000:80</code> (Host to Container)</p>
+                    <p><b>Role:</b> Web UI + Reverse Proxy to backend</p>
+                </div>
+                <div class="node">
+                    <h3>2. Backend API Container</h3>
+                    <p><b>Networks:</b> <code>frontend-net</code> &amp; <code>backend-net</code></p>
+                    <p><b>Port Mapping:</b> <code>5000:5000</code></p>
+                    <p><b>DNS:</b> Dual-homed bridge connector</p>
+                </div>
+                <div class="node">
+                    <h3>3. PostgreSQL DB</h3>
+                    <p><b>Network:</b> <code>backend-net</code> (Isolated)</p>
+                    <p><b>Port Mapping:</b> None (Hidden from Host &amp; Frontend)</p>
+                    <p><b>DNS:</b> Resolves only inside <code>backend-net</code></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Interaction Test -->
+        <div class="card">
+            <h2>13:30 - Live Frontend-Backend Communication</h2>
+            <p>Click below to make a request from this Frontend through the internal Docker network to the Backend API and PostgreSQL DB.</p>
+            <br>
+            <button class="btn" onclick="testBackend()">Execute API &amp; DB Query</button>
+            <pre id="backend-result">// Click 'Execute API & DB Query' to test network communication</pre>
+        </div>
+
+        <!-- Embedded DNS Test -->
+        <div class="card">
+            <h2>11:15 - Test Docker Embedded DNS (127.0.0.11)</h2>
+            <p>Verify how Docker's internal DNS automatically resolves container hostnames (e.g. <code>db</code>):</p>
+            <br>
+            <button class="btn" onclick="testDNS('db')">Resolve DNS for 'db'</button>
+            <button class="btn" style="background: #a855f7; color: white;" onclick="testDNS('backend')">Resolve DNS for 'backend'</button>
+            <pre id="dns-result">// Click a resolution button to test internal DNS service discovery</pre>
+        </div>
+    </div>
+
+    <script>
+        async function testBackend() {
+            const out = document.getElementById('backend-result');
+            out.textContent = "Connecting to /api/status ...";
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                out.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+                out.textContent = "Error communicating with backend: " + err.message;
+            }
+        }
+
+        async function testDNS(hostname) {
+            const out = document.getElementById('dns-result');
+            out.textContent = `Resolving '${hostname}' via Docker Embedded DNS...`;
+            try {
+                const res = await fetch(`/api/dns-lookup?host=${hostname}`);
+                const data = await res.json();
+                out.textContent = JSON.stringify(data, null, 2);
+            } catch (err) {
+                out.textContent = "DNS resolution failed: " + err.message;
+            }
+        }
+    </script>
+</body>
+</html>

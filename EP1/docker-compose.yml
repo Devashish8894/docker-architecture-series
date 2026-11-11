@@ -1,0 +1,84 @@
+services:
+  # ============================================================================
+  # 04:30 - 06:45: Docker Networking & Compose Default Bridge vs Custom Bridge
+  # 09:00: Custom Bridge Networks for Isolation & Clarity
+  # ============================================================================
+
+  # Frontend Service (Client UI)
+  # - Accessible by Host via Port Mapping 3000:80 (15:45 External Access & Port Mapping)
+  # - Belongs ONLY to frontend-net (cannot talk directly to db - network isolation)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ep1-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - frontend-net
+    depends_on:
+      - backend
+
+  # Backend API Service (Application Layer)
+  # - Dual-homed: attached to frontend-net AND backend-net
+  # - Acts as a gateway/intermediary between frontend and database
+  # - Demonstrates 11:15 Docker's Embedded DNS (resolves 'backend' and 'db' by service name)
+  # - Exposes port 5000:5000 for local inspection / API debugging
+  backend:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: ep1-backend
+    environment:
+      - PORT=5000
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=arch_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres_secret
+    ports:
+      - "5000:5000"
+    networks:
+      - frontend-net
+      - backend-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Database Service (Isolated Data Layer)
+  # - Attached ONLY to backend-net (completely hidden from frontend-net & external host)
+  # - Demonstrates security best practices (18:00 Advanced Considerations & Best Practices)
+  db:
+    image: postgres:15-alpine
+    container_name: ep1-db
+    environment:
+      POSTGRES_DB: arch_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_secret
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d arch_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+# ==============================================================================
+# Custom User-Defined Bridge Networks (09:00 Custom Bridge Networks)
+# Provides:
+# 1. Automatic Embedded DNS Service Discovery (11:15)
+# 2. Strict Network Isolation / Security Segmentation
+# ==============================================================================
+networks:
+  frontend-net:
+    driver: bridge
+    name: ep1-frontend-network
+  backend-net:
+    driver: bridge
+    name: ep1-backend-network
+
+volumes:
+  pgdata:
